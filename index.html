@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>Sayang Nil 💝</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&family=Montserrat:wght@200;300&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#000; overflow:hidden; font-family:'Montserrat',sans-serif; }
+    canvas { display:block; }
+    .tap {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      color:#fff; font-family:'Montserrat',sans-serif;
+      font-weight:200; font-size:13px; letter-spacing:7px;
+      text-shadow:0 0 18px rgba(255,255,255,0.5);
+      animation:blink 1.4s ease-in-out infinite;
+      pointer-events:none; z-index:10; text-align:center;
+    }
+    .main-title {
+      position:fixed; top:5%; width:100%; text-align:center;
+      color:#fff; font-family:'Cormorant Garamond',serif;
+      font-weight:300; font-size:28px; letter-spacing:10px;
+      text-transform:uppercase;
+      text-shadow:0 0 12px rgba(255,255,255,0.9),0 0 35px rgba(255,255,255,0.3);
+      pointer-events:none; z-index:5;
+    }
+    .subtitle {
+      position:fixed; top:13%; width:100%; text-align:center;
+      color:rgba(255,255,255,0.4); font-family:'Montserrat',sans-serif;
+      font-weight:200; font-size:10px; letter-spacing:6px;
+      pointer-events:none; z-index:5;
+    }
+    .romantic {
+      position:fixed; bottom:8%; width:100%; text-align:center;
+      color:#fff; font-family:'Cormorant Garamond',serif;
+      font-weight:300; font-style:italic; font-size:18px; letter-spacing:1px;
+      opacity:0; transition:opacity 1.2s;
+      text-shadow:0 0 20px rgba(255,255,255,0.5);
+      pointer-events:none; z-index:5; padding:0 16px;
+    }
+    .bottom-line {
+      position:fixed; bottom:3%; width:100%; text-align:center;
+      color:rgba(255,255,255,0.2); font-family:'Montserrat',sans-serif;
+      font-weight:200; font-size:10px; letter-spacing:8px;
+      pointer-events:none; z-index:5;
+    }
+    @keyframes blink { 0%,100%{opacity:0.15;} 50%{opacity:1;} }
+  </style>
+</head>
+<body>
+  <div class="tap" id="tap">✦ sentuh layar ✦</div>
+  <div class="main-title">Sayang Nil</div>
+  <div class="subtitle">— selamanya & selalu —</div>
+  <div class="romantic" id="romantic"></div>
+  <div class="bottom-line">❤ &nbsp; ✦ &nbsp; ❤</div>
+  <canvas id="c"></canvas>
+
+  <audio id="music" loop preload="auto">
+    <source src="Saturn.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx    = canvas.getContext("2d");
+
+    let W, H, CX, CY;
+    let layers  = [];
+    let stars   = [];
+    let time    = 0;
+    let offset  = 0;
+    let started = false;
+
+    const label = "sayang nil ❤ ";
+    const TOTAL = 200; // lebih banyak titik = semua huruf kelihatan
+
+    const LAYERS = [
+      { scale: 0.80, offsetPhase: 0,   fs: 11, alpha: 0.85 },
+      { scale: 1.00, offsetPhase: 40,  fs: 14, alpha: 1.0  },
+      { scale: 1.20, offsetPhase: 80,  fs: 11, alpha: 0.85 },
+    ];
+
+    const quotes = [
+      "Kamu cantik tanpa harus berusaha",
+      "Senyummu bikin hari aku lebih baik ✦",
+      "Kamu itu spesial, beneran",
+      "Aku nggak butuh alasan buat sayang kamu",
+      "Tiap hari sama kamu selalu berasa cukup",
+      "Kamu tuh hal terbaik yang aku punya",
+      "Nggak ada yang lebih aku pilih selain kamu"
+    ];
+
+    function initStars() {
+      stars = [];
+      const n = Math.floor((W * H) / 3000);
+      for (let i = 0; i < n; i++) {
+        stars.push({
+          x: Math.random() * W, y: Math.random() * H,
+          r: Math.random() * 1.1 + 0.2,
+          tw: Math.random() * Math.PI * 2,
+          sp: Math.random() * 0.005 + 0.002
+        });
+      }
+    }
+
+    function drawStars() {
+      stars.forEach(s => {
+        s.tw += s.sp;
+        const a = 0.08 + 0.3 * Math.abs(Math.sin(s.tw));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle   = `rgba(255,255,255,${a})`;
+        ctx.shadowBlur  = 3;
+        ctx.shadowColor = "rgba(255,255,255,0.3)";
+        ctx.fill();
+        ctx.shadowBlur  = 0;
+      });
+    }
+
+    function heartPoint(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t)
+              -  5 * Math.cos(2*t)
+              -  2 * Math.cos(3*t)
+              -      Math.cos(4*t);
+      return { x, y };
+    }
+
+    function buildLayer(scaleMul) {
+      const pts = [];
+      for (let i = 0; i < TOTAL; i++) {
+        const t = (i / TOTAL) * Math.PI * 2;
+        const p = heartPoint(t);
+        pts.push({ x: p.x * scaleMul, y: p.y * scaleMul });
+      }
+      return pts;
+    }
+
+    function resize() {
+      W  = canvas.width  = window.innerWidth;
+      H  = canvas.height = window.innerHeight;
+      CX = W / 2;
+      CY = H / 2;
+      const base = Math.min(W, H) / 420;
+      layers = LAYERS.map(l => ({
+        ...l,
+        points: buildLayer(12 * base * l.scale)
+      }));
+      initStars();
+    }
+
+    function draw() {
+      requestAnimationFrame(draw);
+      time   += 0.014;
+      offset += 0.22; // pelan, bisa dibaca
+
+      // background tipis agar semua huruf tetap kelihatan
+      ctx.fillStyle = "rgba(0,0,0,0.15)";
+      ctx.fillRect(0, 0, W, H);
+
+      drawStars();
+
+      layers.forEach((layer, li) => {
+        ctx.font      = `300 ${layer.fs}px 'Montserrat',sans-serif`;
+        ctx.textAlign = "center";
+
+        layer.points.forEach((p, i) => {
+          const x = CX + p.x;
+          const y = CY - p.y;
+
+          const charIdx = Math.floor((i + offset + layer.offsetPhase) % label.length);
+          const ch      = label[charIdx];
+
+          // glow warna pink/putih berdenyut halus
+          const glow  = (Math.sin(time * 1.4 + i * 0.08 + li * 1.2) + 1) / 2;
+          const pink  = Math.floor(185 + glow * 55);
+          const blue  = Math.floor(195 + glow * 45);
+
+          ctx.shadowBlur  = 10 + glow * 8;
+          ctx.shadowColor = `rgba(255,${pink},${blue},0.8)`;
+          ctx.fillStyle   = `rgba(255,255,255,${layer.alpha})`;
+          ctx.fillText(ch, x, y);
+        });
+      });
+
+      ctx.shadowBlur = 0;
+    }
+
+    function romanticText() {
+      const el = document.getElementById("romantic");
+      setInterval(() => {
+        el.style.opacity = 0;
+        setTimeout(() => {
+          el.innerText     = quotes[Math.floor(Math.random() * quotes.length)];
+          el.style.opacity = 1;
+        }, 600);
+      }, 3500);
+    }
+
+    const music  = document.getElementById("music");
+    music.volume = 0;
+
+    function startApp() {
+      if (started) return;
+      started = true;
+      document.getElementById("tap").style.display = "none";
+      music.play().then(() => {
+        let vol = 0;
+        const fade = setInterval(() => {
+          if (vol < 1) { vol = Math.min(1, vol + 0.01); music.volume = vol; }
+          else clearInterval(fade);
+        }, 80);
+      }).catch(() => {});
+    }
+
+    document.body.addEventListener("click",      startApp, { once:true });
+    document.body.addEventListener("touchstart", startApp, { once:true });
+
+    resize();
+    draw();
+    romanticText();
+    window.addEventListener("resize", resize);
+  </script>
+</body>
+</html>
